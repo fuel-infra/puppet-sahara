@@ -8,14 +8,6 @@
 #   (Optional) Ensure state for package
 #   Defaults to 'present'.
 #
-# [*manage_service*]
-#   (optional) Whether the service should be managed by Puppet.
-#   Defaults to true.
-#
-# [*enabled*]
-#   (optional) Should the service be enabled.
-#   Defaults to true.
-#
 # [*verbose*]
 #   (Optional) Should the daemons log verbose messages
 #   Defaults to 'false'.
@@ -73,9 +65,36 @@
 #   (optional) CA certificate file to use to verify connecting clients
 #   Defaults to undef
 #
+# == database configuration options
+#
 # [*database_connection*]
 #   (Optional) Non-sqllite database for sahara
-#   Defaults to 'mysql://sahara:secrete@localhost:3306/sahara'
+#   Defaults to undef.
+#
+# [*database_max_retries*]
+#   (Optional) Maximum number of database connection retries during startup.
+#   Set to -1 to specify an infinite retry count.
+#   Defaults to undef.
+#
+# [*database_idle_timeout*]
+#   (Optional) Timeout before idle SQL connections are reaped.
+#   Defaults to undef.
+#
+# [*database_retry_interval*]
+#   (optional) Interval between retries of opening a database connection.
+#   Defaults to undef.
+#
+# [*database_min_pool_size*]
+#   (optional) Minimum number of SQL connections to keep open in a pool.
+#   Defaults to undef.
+#
+# [*database_max_pool_size*]
+#   (optional) Maximum number of SQL connections to keep open in a pool.
+#   Defaults to undef.
+#
+# [*database_max_overflow*]
+#   (optional) If set, use this value for max_overflow with sqlalchemy.
+#   Defaults to undef.
 #
 # [*sync_db*]
 #   (Optional) Enable dbsync
@@ -263,6 +282,14 @@
 #
 # == DEPRECATED PARAMETERS
 #
+# [*manage_service*]
+#   (optional) Whether the service should be managed by Puppet.
+#   Defaults to undef.
+#
+# [*enabled*]
+#   (optional) Should the service be enabled.
+#   Defaults to undef.
+#
 # [*service_host*]
 #   (Optional) DEPRECATED: Use host instead.
 #   Hostname for sahara to listen on
@@ -299,68 +326,75 @@
 #   Defaults to undef.
 #
 class sahara(
-  $manage_service      = true,
-  $enabled             = true,
-  $package_ensure      = 'present',
-  $verbose             = false,
-  $debug               = false,
-  $use_syslog          = false,
-  $use_stderr          = true,
-  $log_facility        = 'LOG_USER',
-  $log_dir             = '/var/log/sahara',
-  $host                = '0.0.0.0',
-  $port                = '8386',
-  $use_neutron         = false,
-  $use_floating_ips    = true,
-  $use_ssl             = false,
-  $ca_file             = undef,
-  $cert_file           = undef,
-  $key_file            = undef,
-  $database_connection = 'mysql://sahara:secrete@localhost:3306/sahara',
-  $sync_db             = true,
-  $admin_user          = 'admin',
-  $admin_password      = false,
-  $admin_tenant_name   = 'admin',
-  $auth_uri            = 'http://127.0.0.1:5000/v2.0/',
-  $identity_uri        = 'http://127.0.0.1:35357/',
-  $rpc_backend           = undef,
-  $amqp_durable_queues   = false,
-  $rabbit_ha_queues      = false,
-  $rabbit_host           = 'localhost',
-  $rabbit_hosts          = false,
-  $rabbit_port           = 5672,
-  $rabbit_use_ssl        = false,
-  $rabbit_userid         = 'guest',
-  $rabbit_password       = 'guest',
-  $rabbit_login_method   = 'AMQPLAIN',
-  $rabbit_virtual_host   = '/',
-  $rabbit_retry_interval = 1,
-  $rabbit_retry_backoff  = 2,
-  $rabbit_max_retries    = 0,
-  $qpid_hostname         = 'localhost',
-  $qpid_port             = 5672,
-  $qpid_hosts            = false,
-  $qpid_username         = 'guest',
-  $qpid_password         = 'guest',
-  $qpid_sasl_mechanisms  = '',
-  $qpid_heartbeat        = 60,
-  $qpid_protocol         = 'tcp',
-  $qpid_tcp_nodelay      = true,
-  $qpid_receiver_capacity = 1,
-  $qpid_topology_version = 2,
-  $zeromq_bind_address   = '*',
-  $zeromq_port           = 9501,
-  $zeromq_contexts       = 1,
-  $zeromq_topic_backlog  = 'None',
-  $zeromq_ipc_dir        = '/var/run/openstack',
-  $zeromq_host           = 'sahara',
-  $cast_timeout          = 30,
-  $kombu_ssl_version     = 'TLSv1',
-  $kombu_ssl_keyfile     = undef,
-  $kombu_ssl_certfile    = undef,
-  $kombu_ssl_ca_certs    = undef,
-  $kombu_reconnect_delay = '1.0',
+  $package_ensure          = 'present',
+  $verbose                 = false,
+  $debug                   = false,
+  $use_syslog              = false,
+  $use_stderr              = true,
+  $log_facility            = 'LOG_USER',
+  $log_dir                 = '/var/log/sahara',
+  $host                    = '0.0.0.0',
+  $port                    = '8386',
+  $use_neutron             = false,
+  $use_floating_ips        = true,
+  $use_ssl                 = false,
+  $ca_file                 = undef,
+  $cert_file               = undef,
+  $key_file                = undef,
+  $database_connection     = undef,
+  $database_max_retries    = undef,
+  $database_idle_timeout   = undef,
+  $database_min_pool_size  = undef,
+  $database_max_pool_size  = undef,
+  $database_max_retries    = undef,
+  $database_retry_interval = undef,
+  $database_max_overflow   = undef,
+  $sync_db                 = true,
+  $admin_user              = 'admin',
+  $admin_password          = false,
+  $admin_tenant_name       = 'admin',
+  $auth_uri                = 'http://127.0.0.1:5000/v2.0/',
+  $identity_uri            = 'http://127.0.0.1:35357/',
+  $rpc_backend             = undef,
+  $amqp_durable_queues     = false,
+  $rabbit_ha_queues        = false,
+  $rabbit_host             = 'localhost',
+  $rabbit_hosts            = false,
+  $rabbit_port             = 5672,
+  $rabbit_use_ssl          = false,
+  $rabbit_userid           = 'guest',
+  $rabbit_password         = 'guest',
+  $rabbit_login_method     = 'AMQPLAIN',
+  $rabbit_virtual_host     = '/',
+  $rabbit_retry_interval   = 1,
+  $rabbit_retry_backoff    = 2,
+  $rabbit_max_retries      = 0,
+  $qpid_hostname           = 'localhost',
+  $qpid_port               = 5672,
+  $qpid_hosts              = false,
+  $qpid_username           = 'guest',
+  $qpid_password           = 'guest',
+  $qpid_sasl_mechanisms    = '',
+  $qpid_heartbeat          = 60,
+  $qpid_protocol           = 'tcp',
+  $qpid_tcp_nodelay        = true,
+  $qpid_receiver_capacity  = 1,
+  $qpid_topology_version   = 2,
+  $zeromq_bind_address     = '*',
+  $zeromq_port             = 9501,
+  $zeromq_contexts         = 1,
+  $zeromq_topic_backlog    = 'None',
+  $zeromq_ipc_dir          = '/var/run/openstack',
+  $zeromq_host             = 'sahara',
+  $cast_timeout            = 30,
+  $kombu_ssl_version       = 'TLSv1',
+  $kombu_ssl_keyfile       = undef,
+  $kombu_ssl_certfile      = undef,
+  $kombu_ssl_ca_certs      = undef,
+  $kombu_reconnect_delay   = '1.0',
   # DEPRECATED PARAMETERS
+  $manage_service      = undef,
+  $enabled             = undef,
   $service_host        = undef,
   $service_port        = undef,
   $keystone_username   = undef,
@@ -370,6 +404,7 @@ class sahara(
   $identity_url        = undef,
 ) {
   include ::sahara::params
+  include ::sahara::db
   include ::sahara::policy
 
   if $service_host {
@@ -422,15 +457,15 @@ class sahara(
   }
 
   if $::osfamily == 'RedHat' {
-    $group_require = Package['sahara']
-    $dir_require = Package['sahara']
-    $conf_require = Package['sahara']
+    $group_require = Package['sahara-common']
+    $dir_require = Package['sahara-common']
+    $conf_require = Package['sahara-common']
   } else {
     # TO-DO(mmagr): This hack has to be removed as soon as following bug
     # is fixed. On Ubuntu sahara-trove is not installable because it needs
     # running database and prefilled sahara.conf in order to install package:
     # https://bugs.launchpad.net/ubuntu/+source/sahara/+bug/1452698
-    Sahara_config<| |> -> Package['sahara']
+    Sahara_config<| |> -> Package['sahara-common']
 
     $group_require = undef
     $dir_require = Group['sahara']
@@ -465,9 +500,9 @@ class sahara(
     selinux_ignore_defaults => true
   }
 
-  package { 'sahara':
+  package { 'sahara-common':
     ensure => $package_ensure,
-    name   => $::sahara::params::package_name,
+    name   => $::sahara::params::common_package_name,
     tag    => ['openstack', 'sahara-package'],
   }
 
@@ -479,25 +514,7 @@ class sahara(
   # https://bugs.launchpad.net/cloud-archive/+bug/1450945
   File['/etc/sahara/sahara.conf'] -> Sahara_config<| |>
 
-  Package['sahara'] -> Class['sahara::policy']
-
-  Package['sahara'] ~> Service['sahara']
-  Class['sahara::policy'] ~> Service['sahara']
-
-  validate_re($database_connection, '(mysql|postgresql):\/\/(\S+:\S+@\S+\/\S+)?')
-
-  case $database_connection {
-    /^mysql:\/\//: {
-      require mysql::bindings
-      require mysql::bindings::python
-    }
-    /^postgresql:\/\//: {
-      require postgresql::lib::python
-    }
-    default: {
-      fail('Unsupported db backend configured')
-    }
-  }
+  Package['sahara-common'] -> Class['sahara::policy']
 
   sahara_config {
     'DEFAULT/use_neutron':      value => $use_neutron;
@@ -507,9 +524,6 @@ class sahara(
     'DEFAULT/debug':            value => $debug;
     'DEFAULT/verbose':          value => $verbose;
     'DEFAULT/use_stderr':       value => $use_stderr;
-    'database/connection':
-      value => $database_connection,
-      secret => true;
   }
 
   if $admin_password_real {
@@ -649,14 +663,6 @@ class sahara(
     }
   }
 
-  if $manage_service {
-    if $enabled {
-      $service_ensure = 'running'
-    } else {
-      $service_ensure = 'stopped'
-    }
-  }
-
   if $use_ssl {
     if !$ca_file {
       fail('The ca_file parameter is required when use_ssl is set to true')
@@ -684,14 +690,13 @@ class sahara(
     include ::sahara::db::sync
   }
 
-  service { 'sahara':
-    ensure     => $service_ensure,
-    name       => $::sahara::params::service_name,
-    hasstatus  => true,
-    enable     => $enabled,
-    hasrestart => true,
-    subscribe  => Exec['sahara-dbmanage'],
-    tag        => 'sahara-service',
+  if $manage_service or $enabled {
+    warning('Configuring daemon services from init class is deprecated.')
+    warning('Use ::sahara::service::{all|api|engine}.pp for configuring daemon services instead.')
+    class { '::sahara::service::all':
+      enabled        => $enabled,
+      manage_service => $manage_service,
+      package_ensure => $package_ensure,
+    }
   }
-
 }
